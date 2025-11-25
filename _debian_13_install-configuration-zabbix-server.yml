@@ -12,7 +12,7 @@
       force: false
 
   - name: a. Install zabbix repository (2/3)
-    ansible.builtin.shell: dpkg -i /home/{{username}}/zabbix-release_latest_7.4+debian13_all.deb
+    ansible.builtin.shell: 'dpkg -i /home/{{username}}/zabbix-release_latest_7.4+debian13_all.deb'
 
   - name: a. Update apt cache and upgrade packages (3/3)
     ansible.builtin.apt:
@@ -42,7 +42,7 @@
       - zabbix-agent2-plugin-postgresql
 
   - name: d. Create initial database
-    ansible.builtin.shell: {item}
+    ansible.builtin.shell: '{{item}}'
     loop:
       - sudo -u postgres createuser --pwprompt zabbix
       - sudo -u postgres createdb -O zabbix zabbix
@@ -60,6 +60,14 @@
       path: /etc/zabbix/nginx.conf
       regexp: '#        listen          8080;'
       line: '   listen          8080;'
+    ignore_errors: true
+
+
+  - name: configuration the postgresql
+    ansible.builtin.lineinfile:
+      path: /etc/postgresql/17/main/pg_hba.conf
+      regexp: 'host    all             all             127.0.0.1/32'
+      line: 'host    all             all             127.0.0.1/32            trust '
 
   - name: f. Start Zabbix server and agent processes (1/2)
     ansible.builtin.systemd_service:
@@ -67,16 +75,11 @@
       state: restarted
       enabled: true
     loop:
+      - postgresql
       - zabbix-server
       - zabbix-agent2
       - nginx
       - php8.4-fpm
-
-  - name: configuration the nginx
-    ansible.builtin.lineinfile:
-      path: /etc/zabbix/nginx.conf
-      regexp: 'host    all             all             127.0.0.1/32            peer'
-      line: 'host    all             all             127.0.0.1/32            trust'
 
   vars:
     username: "admin"
