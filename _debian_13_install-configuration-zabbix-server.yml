@@ -12,7 +12,7 @@
       force: false
 
   - name: a. Install zabbix repository (2/3)
-    ansible.builtin.shell: dpkg -i zabbix-release_latest_7.4+debian13_all.deb
+    ansible.builtin.shell: dpkg -i /home/{{username}}/zabbix-release_latest_7.4+debian13_all.deb
 
   - name: a. Update apt cache and upgrade packages (3/3)
     ansible.builtin.apt:
