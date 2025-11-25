@@ -1,0 +1,82 @@
+---
+- name: Check or/and install zabbix-server
+  hosts: localhost
+  connection: local
+  become: yes
+  tasks:
+
+  - name: a. Download zabbix repository (1/3)
+    ansible.builtin.get_url:
+      url: https://repo.zabbix.com/zabbix/7.4/release/debian/pool/main/z/zabbix-release/zabbix-release_latest_7.4+debian13_all.deb
+      dest: '/home/{{username}}/zabbix-release_latest_7.4+debian13_all.deb'
+      force: false
+
+  - name: a. Install zabbix repository (2/3)
+    ansible.builtin.shell: dpkg -i zabbix-release_latest_7.4+debian13_all.deb
+
+  - name: a. Update apt cache and upgrade packages (3/3)
+    ansible.builtin.apt:
+      update_cache: yes
+      upgrade: yes
+
+  - name: b. Install Zabbix server, frontend, agent2
+    ansible.builtin.apt:
+      name: '{{item}}'
+      state: present
+    loop:
+      - postgresql
+      - zabbix-server-pgsql
+      - zabbix-frontend-php
+      - php8.4-pgsql
+      - zabbix-nginx-conf
+      - zabbix-sql-scripts
+      - zabbix-agent2
+
+  - name: c. Install Zabbix agent 2 plugins
+    ansible.builtin.apt:
+      name: '{{item}}'
+      state: present
+    loop:
+      - zabbix-agent2-plugin-mongodb
+      - zabbix-agent2-plugin-mssql
+      - zabbix-agent2-plugin-postgresql
+
+  - name: d. Create initial database
+    ansible.builtin.shell: {item}
+    loop:
+      - sudo -u postgres createuser --pwprompt zabbix
+      - sudo -u postgres createdb -O zabbix zabbix
+      - zcat /usr/share/zabbix/sql-scripts/postgresql/server.sql.gz | sudo -u zabbix psql zabbix
+    ignore_errors: true
+
+  - name: e. Configure the database for Zabbix server
+    ansible.builtin.lineinfile:
+      path: /etc/zabbix/zabbix_server.conf
+      regexp: '^# DBPassword='
+      line: 'DBPassword=haslo'
+
+  - name: configuration the nginx
+    ansible.builtin.lineinfile:
+      path: /etc/zabbix/nginx.conf
+      regexp: '#        listen          8080;'
+      line: '   listen          8080;'
+
+  - name: f. Start Zabbix server and agent processes (1/2)
+    ansible.builtin.systemd_service:
+      name: '{{item}}'
+      state: restarted
+      enabled: true
+    loop:
+      - zabbix-server
+      - zabbix-agent2
+      - nginx
+      - php8.4-fpm
+
+  - name: configuration the nginx
+    ansible.builtin.lineinfile:
+      path: /etc/zabbix/nginx.conf
+      regexp: 'host    all             all             127.0.0.1/32            peer'
+      line: 'host    all             all             127.0.0.1/32            trust'
+
+  vars:
+    username: "admin"
