@@ -5,5 +5,5 @@ Place to my ansible playbook installation and configuration.
 - knowledge of your Operating System
 # Available playbooks for zabbix server:
 - debian 13<br/>
-# Available playbooks for zabbix agent2:
+# Available playbooks for zabbix agent/2:
 - rocky linux 9.6
