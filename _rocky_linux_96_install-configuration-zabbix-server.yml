@@ -1,4 +1,4 @@
----
+--- not complete
 - name: Check or/and install zabbix-server
   hosts: localhost
   connection: local
